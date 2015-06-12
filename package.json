@@ -1,6 +1,6 @@
 {
   "name": "generator-embedded",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Yeoman generator for an Node.js embedded playground",
   "license": "MIT",
   "main": "app/index.js",

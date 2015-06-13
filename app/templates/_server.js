@@ -1,20 +1,25 @@
 var fs = require('fs');
+
+// serial port with Firmata
+var firmata = require('firmata');
+
+// reference to embedded device
+var modem = '/dev/cu.usbmodem14231';
+
+// setup web server
+var port = 3474;
+var Router = require('router');
+var router = Router();
 var http = require('http');
 var finalhandler = require('finalhandler');
 var morgan = require('morgan');
-
-var Router = require('router');
-var router = Router();
-
-// add serial port
-var firmata = require('firmata');
-var modem = '/dev/cu.usbmodem14131';
-
-var port = 3474;
 console.log('Starting server at port: ' + port);
 
-// logging
+// HTTP logging
 router.use(morgan('default'));
+
+// sockets to push bytes
+var WebSocketServer = require('ws').Server;
 
 // basic static files
 router.get('/', function(req, res) {
@@ -46,10 +51,27 @@ var board = new firmata.Board(modem, function(err){
     process.exit()
   }
 
+  // configure ports
+  board.pinMode(5, board.MODES.INPUT);
 
-
-  http.createServer(function (req, res) {
+  // prepare server
+  var server = http.createServer(function (req, res) {
     router(req, res, finalhandler(req, res));
   }).listen(port);
 
+  // add websockets
+  var wss = new WebSocketServer({server: server});
+  wss.on('connection', function connection(ws) {
+    console.log('websocket connected');
+    ws.on('message', function incoming(message) {
+      console.log('received: %s', message);
+    });
+
+    board.digitalRead(5, function(val, err) {
+      if (val == 1) {
+        console.log(val);
+        ws.send('{"state": ' + val + '}');
+      }
+    });
+  });
 });
